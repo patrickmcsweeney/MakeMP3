@@ -31,7 +31,7 @@ use Path::Class;
 my $FFMPEG = 'ffmpeg';
 my $FFMPEGOPTS = '-c:a pcm_s32le -f wav';
 my $LAME = 'lame';
-my $LAMEOPTS = '--preset extreme -k';
+my $LAMEOPTS = '-V 5';
 my $GAIN = 'aacgain';
 my $AGOPTS = '-a -c';
 my $TGOPTS = '-r -c';
