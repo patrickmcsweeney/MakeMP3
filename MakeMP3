@@ -30,8 +30,6 @@ use Path::Class;
 # Global configuration
 my $FFMPEG = 'ffmpeg';
 my $FFMPEGOPTS = '-c:a pcm_s32le -f wav';
-my $LAME = 'lame';
-my $LAMEOPTS = '--preset extreme -k';
 my $GAIN = 'aacgain';
 my $AGOPTS = '-a -c';
 my $TGOPTS = '-r -c';
@@ -102,7 +100,7 @@ foreach (@ARGV) {
 
             # Create metadata structure.
             my %m = &get_metadata($cuesheet, $cuepath, $cuefile, $file, $track);
-            my $metadata = &build_metadata(%m);
+            my $LAME = &lame_opts(%m);
 
             # Create destination directory structure for generated MP3
             my $destpath = file( $DESTDIR, &sanitise_filename($cuesheet->{PERFORMER}), &sanitise_filename($cuesheet->{TITLE}) );
@@ -115,7 +113,7 @@ foreach (@ARGV) {
 
             # Build commandline to generate MP3
             my $ffmpegtimes = &get_ffmpegtimes($cuesheet, $file, $track);
-            my $cmd = "$FFMPEG -v warning -i \"$ip\" $ffmpegtimes $FFMPEGOPTS - | $LAME --quiet $LAMEOPTS $metadata - \"$dest\" 2>/dev/null";
+            my $cmd = "$FFMPEG -v warning -i \"$ip\" $ffmpegtimes $FFMPEGOPTS - | $LAME - \"$dest\" 2>/dev/null";
             push (@tracks, "\"$dest\"");
 
             # Run the commands
@@ -211,27 +209,29 @@ sub get_metadata {
 }
 
 ##########
-sub build_metadata {
+sub lame_opts {
+    my $opts = '--preset extreme -k';
     my %m = @_;
-    my $metadata;
-    $metadata  = " --id3v2-only --ignore-tag-errors";
-    $metadata .= " --tv TSSE=\"$LAMEOPTS\"";
-    $metadata .= " --tv TENC=\"Encoded using MakeMP3 $VER\"";
-    $metadata .= " --tn $m{tracknr}/$m{numtracks}";
-    $metadata .= " --tv TPOS=$m{cdnumber}/$m{totalcds}";
-    $metadata .= " --tv TCMP=1" if defined ($m{compilation}) && $m{compilation} =~ /TRUE/i;
+    my $l = 'lame --quiet';
+    $l .= " $opts";
+    $l .= ' --id3v2-only --ignore-tag-errors';
+    $l .= " --tv TSSE=\"$opts\"";
+    $l .= " --tv TENC=\"Encoded using MakeMP3 $VER\"";
+    $l .= " --tn $m{tracknr}/$m{numtracks}";
+    $l .= " --tv TPOS=$m{cdnumber}/$m{totalcds}";
+    $l .= " --tv TCMP=1" if defined ($m{compilation}) && $m{compilation} =~ /TRUE/i;
 
-    $metadata .= " --tl \"$m{albumtitle}\""       if defined ($m{albumtitle});
-    $metadata .= " --tv TPE2=\"$m{albumartist}\"" if defined ($m{albumartist});
-    $metadata .= " --tt \"$m{title}\""            if defined ($m{title});
-    $metadata .= " --ta \"$m{artist}\""           if defined ($m{artist});
+    $l .= " --tl \"$m{albumtitle}\""       if defined ($m{albumtitle});
+    $l .= " --tv TPE2=\"$m{albumartist}\"" if defined ($m{albumartist});
+    $l .= " --tt \"$m{title}\""            if defined ($m{title});
+    $l .= " --ta \"$m{artist}\""           if defined ($m{artist});
 
-    $metadata .= " --tg \"$m{genre}\""            if defined ($m{genre});
-    $metadata .= " --ty \"$m{year}\""             if defined ($m{year});
-    $metadata .= " --tc \"$m{comment}\""          if defined ($m{comment});
-    $metadata .= " --tv TCOM=\"$m{composer}\""    if defined ($m{composer});
-    $metadata .= " --ti \"$m{artwork}\""          if defined ($m{artwork});
-    return $metadata;
+    $l .= " --tg \"$m{genre}\""            if defined ($m{genre});
+    $l .= " --ty \"$m{year}\""             if defined ($m{year});
+    $l .= " --tc \"$m{comment}\""          if defined ($m{comment});
+    $l .= " --tv TCOM=\"$m{composer}\""    if defined ($m{composer});
+    $l .= " --ti \"$m{artwork}\""          if defined ($m{artwork});
+    return $l;
 }
 
 ##########
