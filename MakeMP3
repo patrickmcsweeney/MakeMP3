@@ -185,40 +185,42 @@ sub locate_artwork {
 sub get_metadata {
     my ($cuesheet, $file, $track) = @_;
 
-    my $comp    = &meta_override($cuesheet, "COMPILATION"               );
-    my $albumt  = &meta_override($cuesheet, "TITLE"                     );
-    my $albuma  = &meta_override($cuesheet, "PERFORMER"                 );
-    my $trackt  = &meta_override($cuesheet, "TITLE",      $file, $track );
-    my $tracka  = &meta_override($cuesheet, "PERFORMER",  $file, $track );
-    my $genre   = &meta_override($cuesheet, "GENRE",      $file, $track );
-    my $date    = &meta_override($cuesheet, "DATE",       $file, $track );
-    my $comment = &meta_override($cuesheet, "COMMENT",    $file, $track );
-    my $writer  = &meta_override($cuesheet, "SONGWRITER", $file, $track );
-    my $tn      = &meta_override($cuesheet, "TRACK",      $file, $track );
-    my $tt      = &meta_override($cuesheet, "TOTAL_TRACKS",             );
+    my %m;
+    $m{compilation}   = &meta_override($cuesheet, "COMPILATION"               );
+    $m{albumtitle}    = &meta_override($cuesheet, "TITLE"                     );
+    $m{albumartist}   = &meta_override($cuesheet, "PERFORMER"                 );
+    $m{albumcomposer} = &meta_override($cuesheet, "SONGWRITER"                );
+    $m{title}         = &meta_override($cuesheet, "TITLE",      $file, $track );
+    $m{artist}        = &meta_override($cuesheet, "PERFORMER",  $file, $track );
+    $m{composer}      = &meta_override($cuesheet, "SONGWRITER", $file, $track );
+    $m{genre}         = &meta_override($cuesheet, "GENRE",      $file, $track );
+    $m{year}          = &meta_override($cuesheet, "DATE",       $file, $track );
+    $m{comment}       = &meta_override($cuesheet, "COMMENT",    $file, $track );
+    $m{tracknr}       = &meta_override($cuesheet, "TRACK",      $file, $track );
+    $m{numtracks}     = &meta_override($cuesheet, "TOTAL_TRACKS",             );
 
-    my $dn = 1; 
-    $dn = $cuesheet->{DISCNUMBER} if defined $cuesheet->{DISCNUMBER};
-    my $td = $dn;
-    $td = $cuesheet->{TOTALDISCS} if defined $cuesheet->{TOTALDISCS};
+    $m{cdnumber}      = 1; 
+    $m{cdnumber}      = $cuesheet->{DISCNUMBER} if defined $cuesheet->{DISCNUMBER};
+    $m{totalcds}      = $m{cdnumber};
+    $m{totalcds}      = $cuesheet->{TOTALDISCS} if defined $cuesheet->{TOTALDISCS};
 
     my $metadata;
     $metadata  = " --id3v2-only --ignore-tag-errors";
     $metadata .= " --tv TSSE=\"$LAMEOPTS\"";
     $metadata .= " --tv TENC=\"Encoded using MakeMP3 $VER\"";
-    $metadata .= " --tn $tn/$tt";
-    $metadata .= " --tv TPOS=$dn/$td";
-    $metadata .= " --tv TCMP=1" if defined ($comp) && $comp =~ /TRUE/i;
+    $metadata .= " --tn $m{tracknr}/$m{numtracks}";
+    $metadata .= " --tv TPOS=$m{cdnumber}/$m{totalcds}";
+    $metadata .= " --tv TCMP=1" if defined ($m{compilation}) && $m{compilation} =~ /TRUE/i;
 
-    $metadata .= " --tl \"$albumt\""      if defined ($albumt);
-    $metadata .= " --tv TPE2=\"$albuma\"" if defined ($albuma);
-    $metadata .= " --tt \"$trackt\""      if defined ($trackt);
-    $metadata .= " --ta \"$tracka\""      if defined ($tracka);
+    $metadata .= " --tl \"$m{albumtitle}\""       if defined ($m{albumtitle});
+    $metadata .= " --tv TPE2=\"$m{albumartist}\"" if defined ($m{albumartist});
+    $metadata .= " --tt \"$m{title}\""            if defined ($m{title});
+    $metadata .= " --ta \"$m{artist}\""           if defined ($m{artist});
 
-    $metadata .= " --tg \"$genre\""       if defined ($genre);
-    $metadata .= " --ty \"$date\""        if defined ($date);
-    $metadata .= " --tc \"$comment\""     if defined ($comment);
-    $metadata .= " --tv TCOM=\"$writer\"" if defined ($writer);
+    $metadata .= " --tg \"$m{genre}\""            if defined ($m{genre});
+    $metadata .= " --ty \"$m{year}\""             if defined ($m{year});
+    $metadata .= " --tc \"$m{comment}\""          if defined ($m{comment});
+    $metadata .= " --tv TCOM=\"$m{composer}\""    if defined ($m{composer});
 
     return $metadata;
 }
