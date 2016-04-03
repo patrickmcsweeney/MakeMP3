@@ -90,34 +90,32 @@ foreach (@ARGV) {
     print "$cuesheet->{TITLE}:\n";
     for (my $file = 0 ; $file <= $#{$cuesheet->{FILE}} ; $file++) {
         for (my $track = 0 ; $track <= $#{$cuesheet->{FILE}->[$file]->{TRACKS}} ; $track++) {
-            # Find out what track we're at
-            my $dn = &disc_num($cuesheet);
-            my $tn = $dn.sprintf("%.02d",&meta_override($cuesheet, 'TRACK', $file, $track));
+            # Create metadata structure.
+            my %m = &get_metadata($cuesheet, $cuepath, $cuefile, $file, $track);
+            
+            # Find out what track we're at (we use the track prefix, i.e. discnum-tracknum)
+            my $prefix = &prefix(%m);
 
             # Check to see if we're being asked to skip this track
             my $skip = &meta_override($cuesheet, "SKIP", $file, $track);
-            print "... Track $tn skipped!\n" and next if defined ($skip) && $skip =~ /TRUE/i;
+            print "... Track $prefix skipped!\n" and next if defined ($skip) && $skip =~ /TRUE/i;
 
-            # Create metadata structure.
-            my %m = &get_metadata($cuesheet, $cuepath, $cuefile, $file, $track);
-            my $LAME = &lame_opts(%m);
+            # Create encoder command line from metadata
+            my $enc = &lame_opts(%m);
 
-            # Create destination directory structure for generated MP3
-            my $destpath = file( $DESTDIR, &sanitise_filename($cuesheet->{PERFORMER}), &sanitise_filename($cuesheet->{TITLE}) );
-            my $mkdir = "mkdir -p \"$destpath\"";
-
-            # Create filename for generated MP3
-            my $ip = file( $cuepath, $cuesheet->{FILE}->[$file]->{FILE}); # Input path = path + input file.
-            my $title = &sanitise_filename("$tn ".$cuesheet->{FILE}->[$file]->{TRACKS}->[$track]->{TITLE}.".mp3");
-            my $dest = file ( $destpath."/".$title );
+            # Determine destination filename
+            my ($path, $name) = &lame_dest(%m);
+            my $dest = file($path."/".$name);
 
             # Build commandline to generate MP3
+            my $mkdir = "mkdir -p \"$path\"";
             my $ffmpegtimes = &get_ffmpegtimes($cuesheet, $file, $track);
-            my $cmd = "$FFMPEG -v warning -i \"$ip\" $ffmpegtimes $FFMPEGOPTS - | $LAME - \"$dest\" 2>/dev/null";
+            my $ip = file( $cuepath, $cuesheet->{FILE}->[$file]->{FILE}); # Input path = path + input file.
+            my $cmd = "$FFMPEG -v warning -i \"$ip\" $ffmpegtimes $FFMPEGOPTS - | $enc - \"$dest\" 2>/dev/null";
             push (@tracks, "\"$dest\"");
 
             # Run the commands
-            print "... $title\n";
+            print "... $name\n";
             &sys_cmd ($mkdir);
             &sys_cmd ($cmd);
         }
@@ -167,10 +165,12 @@ sub sys_cmd {
 }
 
 ##########
-sub disc_num {
-    my ($cuesheet) = @_;
-    return $cuesheet->{DISCNUMBER}."-" if (defined $cuesheet->{DISCNUMBER} && defined $cuesheet->{TOTALDISCS} && $cuesheet->{TOTALDISCS} > 1);
-    return '';
+sub prefix {
+    my %m = @_;
+    my $prefix = '';
+    $prefix  = "$m{cdnumber}-" if (defined $m{cdnumber} && defined $m{totalcds} && $m{totalcds} > 1);
+    $prefix .= sprintf("%.02d",$m{tracknr});
+    return ($prefix);
 }
 
 ##########
@@ -206,6 +206,14 @@ sub get_metadata {
     $m{artwork}       = &locate_artwork(@_);
 
     return %m;
+}
+
+##########
+sub lame_dest {
+    my %m = @_;
+    my $path   = file( $DESTDIR, &sanitise_filename($m{albumartist}), &sanitise_filename($m{albumtitle}) );
+    my $name   = &sanitise_filename(&prefix(%m)." $m{title}.mp3");
+    return ($path, $name);
 }
 
 ##########
