@@ -111,7 +111,7 @@ foreach (@ARGV) {
 
             # Build commandline to generate MP3
             my $ffmpegtimes = &get_ffmpegtimes($cuesheet, $file, $track);
-            my $metadata = &get_metadata($cuesheet, $file, $track);
+            my $metadata = &build_metadata($cuesheet, $file, $track);
             my $artwork = &locate_artwork($cuesheet, $cuepath, $cuefile, $file, $track);
             my $cmd = "$FFMPEG -v warning -i \"$ip\" $ffmpegtimes $FFMPEGOPTS - | $LAME --quiet $LAMEOPTS $metadata $artwork - \"$dest\" 2>/dev/null";
             push (@tracks, "\"$dest\"");
@@ -204,6 +204,12 @@ sub get_metadata {
     $m{totalcds}      = $m{cdnumber};
     $m{totalcds}      = $cuesheet->{TOTALDISCS} if defined $cuesheet->{TOTALDISCS};
 
+    return %m;
+}
+
+##########
+sub build_metadata {
+    my %m = &get_metadata(@_);
     my $metadata;
     $metadata  = " --id3v2-only --ignore-tag-errors";
     $metadata .= " --tv TSSE=\"$LAMEOPTS\"";
